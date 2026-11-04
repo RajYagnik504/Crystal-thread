@@ -221,8 +221,8 @@ export default function VirtualShowroom({
       0.1,
       100
     );
-    camera.position.set(isMobile ? targetCamX.current : 0.0, isMobile ? -0.65 : 0.0, isMobile ? 7.6 : 8.4);
-    camera.lookAt(isMobile ? targetCamX.current : 0.0, isMobile ? -0.65 : 0.0, 0);
+    camera.position.set(isMobile ? targetCamX.current : 0.0, isMobile ? -0.95 : 0.0, isMobile ? 7.6 : 8.4);
+    camera.lookAt(isMobile ? targetCamX.current : 0.0, isMobile ? -0.95 : 0.0, 0);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: !isMobile,
@@ -552,10 +552,10 @@ export default function VirtualShowroom({
 
       if (isMobile) {
         // Mobile camera glides with touch swipe or navigator arrows
-        camera.position.x += (targetCamX.current - camera.position.x) * 0.09;
-        camera.position.y += (-0.35 - camera.position.y) * 0.08;
-        camera.position.z = 7.2;
-        camera.lookAt(camera.position.x, -0.35, 0);
+        camera.position.x += (targetCamX.current - camera.position.x) * 0.12;
+        camera.position.y += (-0.95 - camera.position.y) * 0.12;
+        camera.position.z = 7.6;
+        camera.lookAt(camera.position.x, -0.95, 0);
       } else {
         // Desktop smooth camera easing with cursor
         camera.position.x += (mousePos.current.x * 0.7 - camera.position.x) * 0.04;
@@ -832,7 +832,11 @@ export default function VirtualShowroom({
       <div className="absolute bottom-4 sm:bottom-6 inset-x-0 z-10 pointer-events-none flex justify-center px-4">
         <div className="bg-[#121217]/85 backdrop-blur-md border border-white/10 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[9px] sm:text-[10px] tracking-[0.12em] sm:tracking-[0.16em] uppercase font-semibold text-zinc-300 shadow-xl flex items-center gap-2 max-w-[92vw]">
           <span className="w-1.5 h-1.5 rounded-full bg-[#7DD3FC] shadow-[0_0_8px_#7DD3FC] animate-pulse flex-shrink-0" />
-          <span className="truncate">Move cursor over clothes to tilt 3D • Tap to view on model</span>
+          <span className="truncate">
+            {isMobileDevice
+              ? 'Swipe horizontally or tap arrows to explore 3D pieces'
+              : 'Move cursor over clothes to tilt 3D • Tap to view on model'}
+          </span>
         </div>
       </div>
 

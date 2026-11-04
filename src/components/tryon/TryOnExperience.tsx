@@ -609,30 +609,20 @@ export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => voi
           {/* Main Visual Display */}
           <div className="md:col-span-7">
             {/* Redesigned Floating Studio Control Bar */}
-            <div className="mb-6 p-4 bg-[#14141E] border border-white/20 rounded-2xl shadow-2xl space-y-3.5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/10">
+            <div className="mb-6 p-3 sm:p-4 bg-[#14141E] border border-white/20 rounded-2xl shadow-2xl space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-white/10">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#7DD3FC] shadow-[0_0_10px_#7DD3FC] animate-pulse" />
-                  <span className="text-xs uppercase font-extrabold tracking-widest text-white">
-                    SELECT SILHOUETTE:
+                  <span className="text-[11px] sm:text-xs uppercase font-extrabold tracking-widest text-white">
+                    SELECT SILHOUETTE
                   </span>
                 </div>
 
                 {/* View Mode Segmented Controls */}
-                <div className="flex items-center p-1 bg-black/70 border border-white/20 rounded-full self-start sm:self-auto shadow-inner gap-1">
-                  <button
-                    onClick={() => setViewMode('slider')}
-                    className={`px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-wider rounded-full transition-all cursor-pointer ${
-                      viewMode === 'slider'
-                        ? 'bg-white text-black shadow-md'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    ↔ Compare Slider
-                  </button>
+                <div className="flex items-center p-1 bg-black/80 border border-white/20 rounded-full shadow-inner gap-1 self-start sm:self-auto">
                   <button
                     onClick={() => setViewMode('fitted')}
-                    className={`px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-wider rounded-full transition-all cursor-pointer ${
+                    className={`px-3 sm:px-4 py-1.5 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider rounded-full transition-all cursor-pointer ${
                       viewMode === 'fitted'
                         ? 'bg-white text-black shadow-md'
                         : 'text-zinc-400 hover:text-white'
@@ -641,8 +631,18 @@ export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => voi
                     ✦ Tailored Fit
                   </button>
                   <button
+                    onClick={() => setViewMode('slider')}
+                    className={`px-3 sm:px-4 py-1.5 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider rounded-full transition-all cursor-pointer ${
+                      viewMode === 'slider'
+                        ? 'bg-white text-black shadow-md'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    ↔ Compare
+                  </button>
+                  <button
                     onClick={() => setViewMode('base')}
-                    className={`px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-wider rounded-full transition-all cursor-pointer ${
+                    className={`px-3 sm:px-4 py-1.5 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider rounded-full transition-all cursor-pointer ${
                       viewMode === 'base'
                         ? 'bg-white text-black shadow-md'
                         : 'text-zinc-400 hover:text-white'
