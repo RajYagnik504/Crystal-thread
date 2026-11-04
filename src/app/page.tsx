@@ -53,7 +53,7 @@ export default function HomePage() {
 
       <main className="overflow-x-hidden bg-[#070709] text-white">
         {/* ── 01. FULL INTERACTIVE 3D VIRTUAL SHOWROOM ── */}
-        <VirtualShowroom onAddToCart={() => setCartOpen(true)} />
+        <VirtualShowroom onAddToCart={() => setCartOpen(true)} isIntroActive={!introComplete} />
 
         {/* ── 02. ANIMATED THREAD WEAVING COLLECTION (KIDS → WOMEN → MEN) ── */}
         <ThreadWeaveSection onAddToCart={() => setCartOpen(true)} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Container from '@/components/layout/Container';
 
@@ -52,6 +52,17 @@ export default function HomeTryOnSection() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [sliderPos, setSliderPos] = useState(50); // percentage 0-100
   const [isDragging, setIsDragging] = useState(false);
+  const [sliderWidth, setSliderWidth] = useState<number>(0);
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateW = () => {
+      if (sliderRef.current) setSliderWidth(sliderRef.current.clientWidth);
+    };
+    updateW();
+    window.addEventListener('resize', updateW);
+    return () => window.removeEventListener('resize', updateW);
+  }, []);
 
   const piece = TRYON_PIECES[selectedIdx];
 
@@ -172,6 +183,7 @@ export default function HomeTryOnSection() {
 
             {/* Interactive Slider Container */}
             <div
+              ref={sliderRef}
               onMouseDown={() => setIsDragging(true)}
               onMouseUp={() => setIsDragging(false)}
               onMouseLeave={() => setIsDragging(false)}
@@ -208,7 +220,13 @@ export default function HomeTryOnSection() {
                 className="absolute inset-0 h-full overflow-hidden"
                 style={{ width: `${sliderPos}%` }}
               >
-                <div className="relative w-full h-full" style={{ width: '560px' }}>
+                <div
+                  className="relative h-full"
+                  style={{
+                    width: sliderWidth > 0 ? `${sliderWidth}px` : (sliderRef.current ? `${sliderRef.current.clientWidth}px` : '100%'),
+                    minWidth: sliderWidth > 0 ? `${sliderWidth}px` : '100%',
+                  }}
+                >
                   <img
                     src={piece.beforeImg}
                     alt="Natural model silhouette before try-on"

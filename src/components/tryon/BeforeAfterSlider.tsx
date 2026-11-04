@@ -11,11 +11,21 @@ export default function BeforeAfterSlider({
   afterImage: string;
   className?: string;
 }) {
-  const [sliderPos, setSliderPos] = useState(50); // percentage 0 - 100
+  const [sliderPos, setSliderPos] = useState(35); // Start at 35% so tailored drape is prominently visible
   const [isDragging, setIsDragging] = useState(false);
   const [threadRipple, setThreadRipple] = useState(0);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const updateW = () => {
+      if (containerRef.current) setContainerWidth(containerRef.current.clientWidth);
+    };
+    updateW();
+    window.addEventListener('resize', updateW);
+    return () => window.removeEventListener('resize', updateW);
+  }, []);
 
   const updatePosition = useCallback((clientX: number) => {
     if (!containerRef.current) return;
@@ -92,9 +102,10 @@ export default function BeforeAfterSlider({
         <img
           src={beforeImage}
           alt="Original photograph"
-          className="absolute inset-0 w-full h-full object-cover object-top max-w-none"
+          className="absolute inset-0 h-full object-cover object-top max-w-none"
           style={{
-            width: containerRef.current ? `${containerRef.current.clientWidth}px` : '100%',
+            width: containerWidth > 0 ? `${containerWidth}px` : (containerRef.current ? `${containerRef.current.clientWidth}px` : '100%'),
+            minWidth: containerWidth > 0 ? `${containerWidth}px` : '100%',
             height: '100%',
           }}
           draggable={false}

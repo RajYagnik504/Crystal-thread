@@ -51,8 +51,12 @@ export const ATELIER_STUDIO_MODELS: AtelierModel[] = [
     garments: {
       'men-linen-shirt': '/images/model-men-linen-shirt.jpg',
       'men-linen-kurta': '/images/model-men-linen-kurta.jpg',
-      'men-bomber-jacket': '/images/model-men-bomber-jacket-aligned.jpg',
+      'men-bomber-jacket': '/images/model-men-bomber-jacket.jpg',
       'men-cotton-tee': '/images/lookbook-men-1.jpg',
+      'men-chino-trousers': '/images/lookbook-men-1.jpg',
+      'men-henley': '/images/model-men-linen-shirt.jpg',
+      'men-linen-blazer': '/images/model-men-bomber-jacket.jpg',
+      'men-polo': '/images/model-men-linen-shirt.jpg',
     },
   },
   {
@@ -66,7 +70,9 @@ export const ATELIER_STUDIO_MODELS: AtelierModel[] = [
     garments: {
       'men-linen-shirt': '/images/model-female-linen-shirt.jpg',
       'men-cotton-tee': '/images/model-female-linen-shirt.jpg',
-      'men-linen-kurta': '/images/model-female-linen-shirt.jpg',
+      'men-linen-kurta': '/images/model-female-linen-tunic.jpg',
+      'men-bomber-jacket': '/images/model-female-linen-shirt.jpg',
+      'kids-cotton-frock': '/images/model-female-linen-tunic.jpg',
     },
   },
   {
@@ -94,8 +100,8 @@ export const ATELIER_STUDIO_MODELS: AtelierModel[] = [
     isDummy: true,
     baseImg: '/images/dummy-female.jpg',
     garments: {
-      'men-linen-shirt': '/images/dummy-female.jpg',
-      'kids-cotton-frock': '/images/dummy-female.jpg',
+      'men-linen-shirt': '/images/dummy-male-linen-shirt.jpg',
+      'kids-cotton-frock': '/images/dummy-male-linen-shirt.jpg',
     },
   },
   {
@@ -109,9 +115,33 @@ export const ATELIER_STUDIO_MODELS: AtelierModel[] = [
     garments: {
       'kids-cotton-frock': '/images/model-kids-frock.jpg',
       'kids-hoodie': '/images/model-kids-hoodie.jpg',
+      'kids-shorts-set': '/images/model-kids-hoodie.jpg',
+      'kids-kurta-set': '/images/model-kids-frock.jpg',
+      'kids-dungaree': '/images/model-kids-hoodie.jpg',
+      'kids-cardigan': '/images/model-kids-frock.jpg',
+      'kids-linen-shirt': '/images/model-kids-hoodie.jpg',
+      'kids-jogger-set': '/images/model-kids-hoodie.jpg',
     },
   },
 ];
+
+export function getGarmentStudioImage(model: AtelierModel, garmentSlug: string): string {
+  if (model.garments[garmentSlug]) {
+    return model.garments[garmentSlug];
+  }
+  if (model.gender === 'female') {
+    return garmentSlug.includes('kurta') ? '/images/model-female-linen-tunic.jpg' : '/images/model-female-linen-shirt.jpg';
+  }
+  if (model.gender === 'kids') {
+    return garmentSlug.includes('frock') ? '/images/model-kids-frock.jpg' : '/images/model-kids-hoodie.jpg';
+  }
+  if (model.isDummy) {
+    return '/images/dummy-male-linen-shirt.jpg';
+  }
+  if (garmentSlug.includes('kurta')) return '/images/model-men-linen-kurta.jpg';
+  if (garmentSlug.includes('jacket') || garmentSlug.includes('blazer')) return '/images/model-men-bomber-jacket.jpg';
+  return '/images/model-men-linen-shirt.jpg';
+}
 
 export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => void }) {
   const searchParams = useSearchParams();
@@ -130,17 +160,17 @@ export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => voi
   // Selected Studio Model / Dummy
   const [activeModel, setActiveModel] = useState<AtelierModel>(ATELIER_STUDIO_MODELS[0]);
   const [isCustomPhoto, setIsCustomPhoto] = useState(false);
-  const [viewMode, setViewMode] = useState<'slider' | 'fitted' | 'base'>('slider');
+  const [viewMode, setViewMode] = useState<'fitted' | 'slider' | 'base'>('fitted');
 
   // Photo states
   const [userPhoto, setUserPhoto] = useState<string | null>(ATELIER_STUDIO_MODELS[0].baseImg);
   const [isThreadingIn, setIsThreadingIn] = useState<boolean>(false);
   const [parentConsent, setParentConsent] = useState<boolean>(false);
 
-  // Processing & result states
+  // Processing & result states: ALWAYS initialize to the actual tailored garment image!
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [resultImage, setResultImage] = useState<string | null>(
-    isInitialStep3 ? ATELIER_STUDIO_MODELS[0].garments[initial.slug] || ATELIER_STUDIO_MODELS[0].baseImg : null
+  const [resultImage, setResultImage] = useState<string>(
+    getGarmentStudioImage(ATELIER_STUDIO_MODELS[0], initial.slug)
   );
   const [isRevealing, setIsRevealing] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -279,7 +309,21 @@ export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => voi
     setActiveModel(model);
     setIsCustomPhoto(false);
     setUserPhoto(model.baseImg);
-    handleGenerateTryOn(selectedGarment, garmentCategory, model);
+    const newImage = getGarmentStudioImage(model, selectedGarment.slug);
+    setResultImage(newImage);
+    setViewMode('fitted');
+  };
+
+  const handleGarmentSwitchInPreview = (garment: ProductItem) => {
+    setSelectedGarment(garment);
+    const isKid = products.kids.some((k) => k.slug === garment.slug);
+    setGarmentCategory(isKid ? 'kids' : 'men');
+    if (garment.sizes && garment.sizes.length > 0) {
+      setSelectedSize(garment.sizes[0]);
+    }
+    const newImage = getGarmentStudioImage(activeModel, garment.slug);
+    setResultImage(newImage);
+    setViewMode('fitted');
   };
 
   const handleDownload = () => {
@@ -626,10 +670,36 @@ export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => voi
                   </button>
                 ))}
               </div>
+
+              {/* Garment Quick Switcher */}
+              <div className="pt-2.5 border-t border-white/10">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-[#7DD3FC] mb-2 flex items-center gap-1.5">
+                  <span>◈ Choose Garment to Try:</span>
+                </p>
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                  {allProducts.map((p) => {
+                    const isSelected = selectedGarment.slug === p.slug;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => handleGarmentSwitchInPreview(p)}
+                        className={`px-3.5 py-1.5 text-xs font-bold rounded-full transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 border ${
+                          isSelected
+                            ? 'bg-[#7DD3FC] text-black border-[#7DD3FC] shadow-[0_0_15px_rgba(125,211,252,0.45)]'
+                            : 'bg-white/[0.05] border-white/10 text-zinc-300 hover:text-white hover:border-white/30 hover:bg-white/10'
+                        }`}
+                      >
+                        <span>{p.category === 'kids' ? '🧒' : p.name.includes('Kurta') ? '🥻' : p.name.includes('Bomber') ? '🧥' : '👔'}</span>
+                        <span>{p.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Visual Canvas Area */}
-            <div className="relative rounded-2xl overflow-hidden border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.85)] bg-[#101015]">
+            <div className="relative rounded-2xl overflow-hidden border border-white/15 shadow-[0_20px_60px_rgba(0,0,0,0.85)] bg-[#101015] max-w-[480px] mx-auto w-full">
               {isProcessing ? (
                 <ThreadScanAnimation
                   userImage={userPhoto || ''}
@@ -647,7 +717,7 @@ export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => voi
                   afterImage={resultImage || userPhoto || ''}
                 />
               ) : viewMode === 'fitted' ? (
-                <div className="relative aspect-[3/4] max-h-[580px] w-full bg-[#141418]">
+                <div className="relative aspect-[3/4] max-h-[620px] w-full bg-[#141418]">
                   <img
                     src={resultImage || userPhoto || ''}
                     alt="Full tailored fit"
@@ -656,6 +726,9 @@ export default function TryOnExperience({ onOpenCart }: { onOpenCart?: () => voi
                   <div className="absolute top-4 right-4 bg-black/85 backdrop-blur-md px-3.5 py-1.5 rounded-full text-[10px] tracking-widest uppercase border border-white/20 text-[#7DD3FC] shadow-lg flex items-center gap-1.5 font-bold">
                     <span className="w-2 h-2 rounded-full bg-[#7DD3FC] animate-pulse" />
                     <span>Tailored Studio Drape</span>
+                  </div>
+                  <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-full text-[10px] tracking-wider uppercase border border-white/15 text-white shadow-lg">
+                    {selectedGarment.name} • {activeModel.shortLabel}
                   </div>
                 </div>
               ) : (

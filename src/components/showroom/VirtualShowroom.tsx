@@ -123,8 +123,10 @@ const SHOWROOM_ITEMS: ShowroomGarment[] = [
 
 export default function VirtualShowroom({
   onAddToCart,
+  isIntroActive = false,
 }: {
   onAddToCart?: (item: ShowroomGarment, size: string) => void;
+  isIntroActive?: boolean;
 }) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<'all' | 'men' | 'kids'>('all');
@@ -132,6 +134,13 @@ export default function VirtualShowroom({
   const [selectedGarment, setSelectedGarment] = useState<ShowroomGarment | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>('M');
   const [showDrawer, setShowDrawer] = useState(false);
+
+  // Mobile navigation index & spring refs
+  const [mobileIdx, setMobileIdx] = useState(0);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const targetCamX = useRef(SHOWROOM_ITEMS[0].pos[0]);
+  const isIntroRef = useRef(isIntroActive);
+  isIntroRef.current = isIntroActive;
 
   // Animation & Three.js state refs
   const mousePos = useRef({ x: 0, y: 0 });
@@ -147,6 +156,34 @@ export default function VirtualShowroom({
     spin360Progress: number;
     isSpinning360: boolean;
   }[]>([]);
+
+  // Mobile step controls
+  const handleMobileStep = useCallback((step: number) => {
+    setMobileIdx((prev) => {
+      const next = (prev + step + SHOWROOM_ITEMS.length) % SHOWROOM_ITEMS.length;
+      targetCamX.current = SHOWROOM_ITEMS[next].pos[0];
+      return next;
+    });
+  }, []);
+
+  const handleSelectMobileIndex = useCallback((index: number) => {
+    setMobileIdx(index);
+    targetCamX.current = SHOWROOM_ITEMS[index].pos[0];
+  }, []);
+
+  const handleFilterChange = (newFilter: 'all' | 'men' | 'kids') => {
+    setFilter(newFilter);
+    if (newFilter === 'kids') {
+      const kidsIdx = SHOWROOM_ITEMS.findIndex((i) => i.category === 'kids');
+      if (kidsIdx !== -1) {
+        setMobileIdx(kidsIdx);
+        targetCamX.current = SHOWROOM_ITEMS[kidsIdx].pos[0];
+      }
+    } else if (newFilter === 'men') {
+      setMobileIdx(0);
+      targetCamX.current = SHOWROOM_ITEMS[0].pos[0];
+    }
+  };
 
   // Open drawer when garment clicked
   const handleOpenDrawer = useCallback((item: ShowroomGarment) => {
@@ -171,6 +208,7 @@ export default function VirtualShowroom({
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
     const isMobile = width < 768;
+    setIsMobileDevice(isMobile);
 
     // ── Three.js Scene, Camera, Renderer ──
     const scene = new THREE.Scene();
@@ -178,21 +216,21 @@ export default function VirtualShowroom({
     scene.fog = new THREE.FogExp2(0x070709, 0.045);
 
     const camera = new THREE.PerspectiveCamera(
-      isMobile ? 54 : 45,
+      isMobile ? 52 : 45,
       width / height,
       0.1,
       100
     );
-    camera.position.set(0, isMobile ? -0.2 : 0.0, isMobile ? 12.0 : 8.4);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(isMobile ? targetCamX.current : 0.0, isMobile ? -0.65 : 0.0, isMobile ? 7.6 : 8.4);
+    camera.lookAt(isMobile ? targetCamX.current : 0.0, isMobile ? -0.65 : 0.0, 0);
 
     const renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: !isMobile,
       powerPreference: 'high-performance',
       alpha: false,
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(isMobile ? 1.5 : Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
 
@@ -427,6 +465,19 @@ export default function VirtualShowroom({
       }
     };
 
+    let touchStartX = 0;
+    let touchStartCamX = 0;
+    let isTouchDragging = false;
+    let touchMoved = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (!e.touches[0]) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartCamX = targetCamX.current;
+      isTouchDragging = true;
+      touchMoved = false;
+    };
+
     const onTouchMove = (e: TouchEvent) => {
       if (!e.touches[0]) return;
       const t = e.touches[0];
@@ -438,10 +489,33 @@ export default function VirtualShowroom({
       mousePos.current.y = currentY;
       mouseNorm.x = currentX;
       mouseNorm.y = currentY;
+
+      if (isTouchDragging && isMobile) {
+        const deltaPx = t.clientX - touchStartX;
+        if (Math.abs(deltaPx) > 5) touchMoved = true;
+        const deltaNorm = deltaPx / width;
+        targetCamX.current = Math.max(-5.8, Math.min(5.8, touchStartCamX - deltaNorm * 9.5));
+      }
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.changedTouches[0]) {
+      isTouchDragging = false;
+      if (isMobile) {
+        // Snap smoothly to nearest garment
+        let closestIdx = 0;
+        let minDist = 9999;
+        SHOWROOM_ITEMS.forEach((item, i) => {
+          const dist = Math.abs(item.pos[0] - targetCamX.current);
+          if (dist < minDist) {
+            minDist = dist;
+            closestIdx = i;
+          }
+        });
+        setMobileIdx(closestIdx);
+        targetCamX.current = SHOWROOM_ITEMS[closestIdx].pos[0];
+      }
+
+      if (!touchMoved && e.changedTouches[0]) {
         const t = e.changedTouches[0];
         const rect = container.getBoundingClientRect();
         mouseNorm.x = ((t.clientX - rect.left) / rect.width) * 2 - 1;
@@ -460,7 +534,7 @@ export default function VirtualShowroom({
     window.addEventListener('mousemove', onPointerMove);
     container.addEventListener('mouseleave', onPointerLeave);
     container.addEventListener('click', onClick);
-    container.addEventListener('touchstart', onTouchMove, { passive: true });
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
     container.addEventListener('touchmove', onTouchMove, { passive: true });
     container.addEventListener('touchend', onTouchEnd, { passive: true });
 
@@ -468,13 +542,27 @@ export default function VirtualShowroom({
     let animId = 0;
 
     const animate = () => {
+      if (isIntroRef.current) {
+        animId = requestAnimationFrame(animate);
+        return;
+      }
+
       timeRef.current += 0.016;
       const time = timeRef.current;
 
-      // Smooth subtle camera easing with cursor
-      camera.position.x += (mousePos.current.x * 0.7 - camera.position.x) * 0.04;
-      camera.position.y += (mousePos.current.y * 0.3 + (isMobile ? -0.2 : 0.0) - camera.position.y) * 0.04;
-      camera.lookAt(0, 0, 0);
+      if (isMobile) {
+        // Mobile camera glides with touch swipe or navigator arrows
+        camera.position.x += (targetCamX.current - camera.position.x) * 0.09;
+        camera.position.y += (-0.35 - camera.position.y) * 0.08;
+        camera.position.z = 7.2;
+        camera.lookAt(camera.position.x, -0.35, 0);
+      } else {
+        // Desktop smooth camera easing with cursor
+        camera.position.x += (mousePos.current.x * 0.7 - camera.position.x) * 0.04;
+        camera.position.y += (mousePos.current.y * 0.3 - camera.position.y) * 0.04;
+        camera.position.z = 8.4;
+        camera.lookAt(0, 0, 0);
+      }
 
       // Raycast hover check
       raycaster.setFromCamera(mouseNorm, camera);
@@ -634,7 +722,9 @@ export default function VirtualShowroom({
 
           {/* Subtitle */}
           <p className="font-sans text-[11px] sm:text-xs md:text-sm text-zinc-300 mt-1 sm:mt-2 max-w-[340px] sm:max-w-xl font-normal leading-relaxed drop-shadow">
-            Move your cursor across any piece to inspect the drape in 3D. Click to view on real model.
+            {isMobileDevice
+              ? 'Swipe horizontally to inspect drape in 3D. Tap any piece to view on real model.'
+              : 'Move your cursor across any piece to inspect the drape in 3D. Click to view on real model.'}
           </p>
 
           {/* Category Switcher Tabs */}
@@ -642,7 +732,7 @@ export default function VirtualShowroom({
             {(['all', 'men', 'kids'] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setFilter(tab)}
+                onClick={() => handleFilterChange(tab)}
                 className={`text-[9px] sm:text-[11px] tracking-[0.14em] sm:tracking-[0.16em] uppercase font-bold px-3.5 sm:px-5 py-1 sm:py-1.5 rounded-full transition-all cursor-pointer ${
                   filter === tab
                     ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.35)]'
@@ -651,6 +741,48 @@ export default function VirtualShowroom({
               >
                 {tab === 'all' ? 'All (6)' : tab === 'men' ? 'Men (4)' : 'Kids (2)'}
               </button>
+            ))}
+          </div>
+
+          {/* Mobile Garment Slider & Indicator Bar */}
+          <div className="mt-3 flex sm:hidden items-center justify-between gap-3 pointer-events-auto bg-[#121217]/95 backdrop-blur-xl px-4 py-2 border border-white/15 shadow-xl rounded-full w-full max-w-[320px]">
+            <button
+              onClick={() => handleMobileStep(-1)}
+              className="w-7 h-7 rounded-full bg-white/[0.08] hover:bg-white text-white hover:text-black flex items-center justify-center text-xs font-bold transition-all cursor-pointer border border-white/10"
+              aria-label="Previous piece"
+            >
+              ‹
+            </button>
+            <div className="text-center min-w-0">
+              <p className="text-[10px] font-extrabold text-white uppercase tracking-wider truncate">
+                {SHOWROOM_ITEMS[mobileIdx].name}
+              </p>
+              <p className="text-[8px] text-[#7DD3FC] font-bold tracking-widest uppercase">
+                {mobileIdx + 1} of {SHOWROOM_ITEMS.length} • Swipe to View All
+              </p>
+            </div>
+            <button
+              onClick={() => handleMobileStep(1)}
+              className="w-7 h-7 rounded-full bg-white/[0.08] hover:bg-white text-white hover:text-black flex items-center justify-center text-xs font-bold transition-all cursor-pointer border border-white/10"
+              aria-label="Next piece"
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Mobile Dot Indicators */}
+          <div className="flex sm:hidden items-center justify-center gap-1.5 mt-2 pointer-events-auto">
+            {SHOWROOM_ITEMS.map((item, i) => (
+              <button
+                key={item.id}
+                onClick={() => handleSelectMobileIndex(i)}
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                  mobileIdx === i
+                    ? 'w-6 bg-[#7DD3FC] shadow-[0_0_8px_#7DD3FC]'
+                    : 'w-1.5 bg-white/20 hover:bg-white/50'
+                }`}
+                aria-label={`Jump to ${item.name}`}
+              />
             ))}
           </div>
         </div>
